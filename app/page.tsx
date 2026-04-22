@@ -215,7 +215,7 @@ export default function Home() {
 
   return (
     <div style={container}>
-      <h1 style={title}>🏠 Housing Analyzer</h1>
+      <h1 style={title}>🏠 Cek Rumah Murah</h1>
 
       <div style={card}>
         {/* PRICE */}
