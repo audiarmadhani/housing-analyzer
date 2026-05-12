@@ -451,8 +451,8 @@ export default function Home() {
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400/90">
                 Housing AI
               </p>
-              <h1 className="text-4xl font-bold uppercase leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-[2.75rem] xl:text-5xl">
-                Fair home price check
+              <h1 className="text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-[2.75rem] xl:text-5xl">
+                Fair Home Price Check
               </h1>
               <p className="mt-5 max-w-md text-pretty text-base leading-relaxed text-slate-400">
                 Tell us about the listing in a few steps — we compare it with similar properties
