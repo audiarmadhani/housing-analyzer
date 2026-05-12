@@ -421,7 +421,11 @@ export default function Home() {
       <div className="pointer-events-none absolute inset-0 grid-overlay" />
 
       <main
-        className={`relative mx-auto px-4 pb-24 pt-14 transition-[max-width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-6 lg:pt-20 ${splitLayout ? "max-w-7xl" : "max-w-6xl"}`}
+        className={`relative mx-auto px-4 transition-[max-width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-6 ${
+          splitLayout
+            ? "max-w-7xl pb-24 pt-14 lg:pt-20"
+            : "flex min-h-screen items-center max-w-6xl"
+        }`}
       >
         {splitLayout && (
           <p className="mb-6 text-center text-sm text-slate-400 lg:hidden">
@@ -430,7 +434,11 @@ export default function Home() {
         )}
 
         <div
-          className={`flex flex-col gap-10 lg:flex-row lg:items-stretch lg:gap-10 ${!splitLayout ? "lg:justify-between lg:gap-x-12 xl:gap-x-20" : ""}`}
+          className={`w-full flex flex-col gap-10 lg:flex-row lg:gap-10 ${
+            splitLayout
+              ? "lg:items-stretch"
+              : "lg:items-center lg:justify-between lg:gap-x-12 xl:gap-x-20"
+          }`}
         >
           {!splitLayout && (
             <header className="animate-fade-up flex max-w-xl flex-shrink-0 flex-col justify-center lg:py-4">
