@@ -334,8 +334,8 @@ export default function Home() {
 
         <div className="animate-fade-up-delay-1 mt-12">
           <div className="rounded-3xl border border-white/10 bg-slate-900/40 p-6 shadow-2xl shadow-violet-950/20 backdrop-blur-xl sm:p-8">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="sm:col-span-2">
+            <div className="flex flex-col gap-3">
+              <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-400">Price</label>
                 <input
                   className={fieldClass}
