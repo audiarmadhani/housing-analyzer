@@ -195,7 +195,7 @@ export async function analyzeListing(input: any) {
     return { error: "Invalid input" };
   }
 
-  let comps = await fetchComparables(input);
+  const comps = await fetchComparables(input);
 
   if (!comps.length) {
     return { error: "No data available" };

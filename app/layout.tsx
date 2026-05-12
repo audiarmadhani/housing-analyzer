@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Rumah Murah",
-  description: "by Audi Armadhani",
+  title: "Cek Rumah Murah · Housing AI",
+  description: "Periksa apakah harga properti Anda wajar dibanding pasar.",
 };
 
 export default function RootLayout({
@@ -27,7 +27,9 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-slate-950 text-slate-100 antialiased">
+        {children}
+      </body>
     </html>
   );
 }
