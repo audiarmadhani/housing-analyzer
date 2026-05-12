@@ -128,7 +128,7 @@ function PriceBar({
   return (
     <div className="mt-8">
       <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
-        Posisi dalam rentang pasar
+        Position in the market range
       </p>
       <div className="relative h-2.5 overflow-hidden rounded-full bg-slate-800/80">
         <div
@@ -144,9 +144,9 @@ function PriceBar({
         />
       </div>
       <div className="relative mt-2 flex justify-between text-xs text-slate-500">
-        <span>Murah</span>
-        <span>Wajar</span>
-        <span>Mahal</span>
+        <span>Cheap</span>
+        <span>Fair</span>
+        <span>Expensive</span>
       </div>
     </div>
   );
@@ -162,7 +162,7 @@ function MiniChart({ result }: { result: AnalyzeSuccess }) {
   return (
     <div className="mt-8">
       <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
-        Distribusi harga per m² efektif
+        Effective price per m² distribution
       </p>
       <div className="flex h-24 items-end gap-0.5 rounded-xl border border-white/5 bg-slate-900/40 p-3">
         {values.slice(0, 30).map((v: number, i: number) => (
@@ -197,13 +197,13 @@ function ResultSummary({
       <div>
         <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-violet-200/90">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-          Analisis selesai
+          Analysis complete
         </span>
         <h2 className="mt-4 text-3xl font-semibold capitalize tracking-tight text-white sm:text-4xl">
           {result.market_position}
         </h2>
         <p className="mt-2 text-sm text-slate-400">
-          Persentil ke-{result.percentile} dibanding properti serupa
+          {result.percentile} percentile vs. similar listings
         </p>
       </div>
 
@@ -219,13 +219,13 @@ function ResultSummary({
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-            Perkiraan harga wajar
+            Estimated fair price
           </p>
           <p className="mt-2 text-xl font-semibold tracking-tight text-cyan-100">
             {formatCurrency(result.fair_price)}
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            Rentang {formatCurrency(result.low_price)} — {formatCurrency(result.high_price)}
+            Range {formatCurrency(result.low_price)} — {formatCurrency(result.high_price)}
           </p>
         </div>
       </div>
@@ -234,7 +234,7 @@ function ResultSummary({
       <MiniChart result={result} />
 
       <p className="text-center text-xs text-slate-500">
-        Berdasarkan {result.comps_count} listing · Kepercayaan:{" "}
+        Based on {result.comps_count} listings · Confidence:{" "}
         <span className="text-slate-400">{result.confidence}</span>
       </p>
     </div>
@@ -247,7 +247,7 @@ function CompsList({ comps }: { comps: CompListing[] }) {
   return (
     <div className="mt-10 border-t border-white/10 pt-10">
       <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-        Listing pembanding
+        Comparable listings
       </h3>
       <div className="mt-4 space-y-3">
         {comps.map((c, i) => (
@@ -262,7 +262,7 @@ function CompsList({ comps }: { comps: CompListing[] }) {
             <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-400">
               <span className="font-mono text-violet-200">{formatCurrency(c.price)}</span>
               <span className="text-slate-500">·</span>
-              <span>{c.land_size} m² tanah</span>
+              <span>{c.land_size} m² land</span>
             </div>
           </a>
         ))}
@@ -321,14 +321,14 @@ export default function Home() {
         <header className="animate-fade-up text-center">
           <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-xs font-medium text-slate-300 backdrop-blur-sm">
             <span className="text-base leading-none">🏠</span>
-            Model harga pasar · Indonesia
+            Market pricing · Indonesia
           </div>
           <h1 className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-4xl font-semibold tracking-tight text-transparent sm:text-5xl">
-            Cek Rumah Murah
+            Fair Home Price Check
           </h1>
           <p className="mx-auto mt-4 max-w-lg text-pretty text-sm leading-relaxed text-slate-400 sm:text-base">
-            Masukkan detail listing Anda. Kami bandingkan dengan data properti serupa dan
-            memberi skor kewajaran harga secara instan.
+            Enter your listing details. We compare them with similar properties and give you an
+            instant read on how fair the price looks.
           </p>
         </header>
 
@@ -336,10 +336,10 @@ export default function Home() {
           <div className="rounded-3xl border border-white/10 bg-slate-900/40 p-6 shadow-2xl shadow-violet-950/20 backdrop-blur-xl sm:p-8">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Harga</label>
+                <label className="mb-1.5 block text-xs font-medium text-slate-400">Price</label>
                 <input
                   className={fieldClass}
-                  placeholder="Rp (contoh: 2.500.000.000)"
+                  placeholder="IDR (e.g. 2,500,000,000)"
                   value={formatNumber(input.price)}
                   onChange={(e) =>
                     setInput({ ...input, price: e.target.value.replace(/\D/g, "") })
@@ -348,7 +348,7 @@ export default function Home() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Kota</label>
+                <label className="mb-1.5 block text-xs font-medium text-slate-400">City</label>
                 <select
                   className={fieldClass}
                   value={input.city}
@@ -356,7 +356,7 @@ export default function Home() {
                     setInput({ ...input, city: e.target.value, district: "" })
                   }
                 >
-                  <option value="">Pilih kota</option>
+                  <option value="">Select city</option>
                   {Object.keys(LOCATION_MAP).map((c) => (
                     <option key={c} value={c} className="bg-slate-900">
                       {c}
@@ -367,7 +367,7 @@ export default function Home() {
 
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                  Kecamatan / area
+                  District / area
                 </label>
                 <select
                   className={fieldClass}
@@ -375,7 +375,7 @@ export default function Home() {
                   disabled={!input.city}
                   onChange={(e) => setInput({ ...input, district: e.target.value })}
                 >
-                  <option value="">Pilih area</option>
+                  <option value="">Select area</option>
                   {districts.map((d: string) => (
                     <option key={d} value={d} className="bg-slate-900">
                       {d}
@@ -386,7 +386,7 @@ export default function Home() {
 
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                  Luas tanah (m²)
+                  Land size (m²)
                 </label>
                 <input
                   className={fieldClass}
@@ -398,7 +398,7 @@ export default function Home() {
 
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                  Luas bangunan (m²)
+                  Building size (m²)
                 </label>
                 <input
                   className={fieldClass}
@@ -409,7 +409,7 @@ export default function Home() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Kamar tidur</label>
+                <label className="mb-1.5 block text-xs font-medium text-slate-400">Bedrooms</label>
                 <input
                   className={fieldClass}
                   placeholder="0"
@@ -419,7 +419,7 @@ export default function Home() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Kamar mandi</label>
+                <label className="mb-1.5 block text-xs font-medium text-slate-400">Bathrooms</label>
                 <input
                   className={fieldClass}
                   placeholder="0"
@@ -430,7 +430,7 @@ export default function Home() {
 
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                  Listrik (Watt)
+                  Electrical power (W)
                 </label>
                 <input
                   className={fieldClass}
@@ -441,13 +441,13 @@ export default function Home() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Sertifikat</label>
+                <label className="mb-1.5 block text-xs font-medium text-slate-400">Title (certificate)</label>
                 <select
                   className={fieldClass}
                   value={input.sertifikat}
                   onChange={(e) => setInput({ ...input, sertifikat: e.target.value })}
                 >
-                  <option value="">Pilih</option>
+                  <option value="">Select</option>
                   <option value="shm" className="bg-slate-900">
                     SHM
                   </option>
@@ -464,7 +464,7 @@ export default function Home() {
                   value={input.interior}
                   onChange={(e) => setInput({ ...input, interior: e.target.value })}
                 >
-                  <option value="">Pilih</option>
+                  <option value="">Select</option>
                   <option value="full furnished" className="bg-slate-900">
                     Full furnished
                   </option>
@@ -478,13 +478,13 @@ export default function Home() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Posisi</label>
+                <label className="mb-1.5 block text-xs font-medium text-slate-400">Lot type</label>
                 <select
                   className={fieldClass}
                   value={input.orientation}
                   onChange={(e) => setInput({ ...input, orientation: e.target.value })}
                 >
-                  <option value="">Pilih</option>
+                  <option value="">Select</option>
                   <option value="hook" className="bg-slate-900">
                     Hook
                   </option>
@@ -524,11 +524,11 @@ export default function Home() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  Menganalisis…
+                  Analyzing…
                 </>
               ) : (
                 <>
-                  Jalankan analisis
+                  Run analysis
                   <span className="transition group-hover:translate-x-0.5">→</span>
                 </>
               )}

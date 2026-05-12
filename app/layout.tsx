@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cek Rumah Murah · Housing AI",
-  description: "Periksa apakah harga properti Anda wajar dibanding pasar.",
+  title: "Fair Home Price Check · Housing AI",
+  description: "See whether a listing price is fair compared with the market.",
 };
 
 export default function RootLayout({
