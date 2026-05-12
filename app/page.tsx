@@ -50,6 +50,124 @@ const fieldClass =
 const glassCard =
   "rounded-3xl border border-white/15 bg-slate-950/40 p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8";
 
+type StepOption = {
+  value: string;
+  label: string;
+};
+
+type StepConfig = {
+  id: keyof ListingFormState;
+  question: string;
+  description: string;
+  placeholder?: string;
+  inputType: "text" | "select";
+  required?: boolean;
+  options?: StepOption[];
+};
+
+const FORM_STEPS: StepConfig[] = [
+  {
+    id: "price",
+    question: "What is the asking price?",
+    description: "Enter the listing price in Indonesian Rupiah.",
+    placeholder: "IDR (e.g. 2,500,000,000)",
+    inputType: "text",
+    required: true,
+  },
+  {
+    id: "city",
+    question: "Which city is the property in?",
+    description: "Choose the city to narrow the market area.",
+    inputType: "select",
+    required: true,
+  },
+  {
+    id: "district",
+    question: "Which district or area is it in?",
+    description: "Pick the closest area so we can compare against nearby listings.",
+    inputType: "select",
+    required: true,
+  },
+  {
+    id: "land_size",
+    question: "How large is the land?",
+    description: "Enter the land size in square meters.",
+    placeholder: "0",
+    inputType: "text",
+    required: true,
+  },
+  {
+    id: "building_size",
+    question: "How large is the building?",
+    description: "Optional, but it improves comparable matching.",
+    placeholder: "0",
+    inputType: "text",
+  },
+  {
+    id: "bedrooms",
+    question: "How many bedrooms are there?",
+    description: "Optional, but helps compare similar homes.",
+    placeholder: "0",
+    inputType: "text",
+  },
+  {
+    id: "bathrooms",
+    question: "How many bathrooms are there?",
+    description: "Optional, but useful for refining results.",
+    placeholder: "0",
+    inputType: "text",
+  },
+  {
+    id: "electricity",
+    question: "What is the electrical power?",
+    description: "Optional. Enter the installed wattage if you know it.",
+    placeholder: "4400",
+    inputType: "text",
+  },
+  {
+    id: "sertifikat",
+    question: "What certificate type does it have?",
+    description: "Choose the ownership certificate when available.",
+    inputType: "select",
+    options: [
+      { value: "shm", label: "SHM" },
+      { value: "hgb", label: "HGB" },
+    ],
+  },
+  {
+    id: "interior",
+    question: "What is the furnishing condition?",
+    description: "This helps us compare homes with a similar finish level.",
+    inputType: "select",
+    options: [
+      { value: "full furnished", label: "Full furnished" },
+      { value: "semi furnished", label: "Semi furnished" },
+      { value: "unfurnished", label: "Unfurnished" },
+    ],
+  },
+  {
+    id: "orientation",
+    question: "What is the lot type?",
+    description: "Choose whether the home is on a hook lot or a standard lot.",
+    inputType: "select",
+    options: [
+      { value: "hook", label: "Hook" },
+      { value: "normal", label: "Normal" },
+    ],
+  },
+];
+
+function isStepComplete(
+  step: StepConfig,
+  input: ListingFormState,
+  districts: string[]
+): boolean {
+  const value = input[step.id].trim();
+  if (!step.required) return true;
+  if (step.id === "district") return districts.length > 0 && value.length > 0;
+  return value.length > 0;
+}
+
 function PriceBar({
   result,
   input,
@@ -232,11 +350,43 @@ export default function Home() {
 
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [stepDirection, setStepDirection] = useState<1 | -1>(1);
 
   const districts = input.city ? LOCATION_MAP[input.city] || [] : [];
+  const currentStep = FORM_STEPS[stepIndex];
+  const totalSteps = FORM_STEPS.length;
+  const isLastStep = stepIndex === totalSteps - 1;
+  const canContinue = isStepComplete(currentStep, input, districts);
+  const stepProgress = ((stepIndex + 1) / totalSteps) * 100;
 
   /** After “Run analysis”, narrow form on the left and show results (or loading) on the right. */
   const splitLayout = loading || result !== null;
+
+  function updateField(field: keyof ListingFormState, value: string) {
+    setInput((prev) => {
+      if (field === "city") {
+        return { ...prev, city: value, district: "" };
+      }
+      return { ...prev, [field]: value };
+    });
+  }
+
+  function goToNextStep() {
+    if (!canContinue) return;
+    if (isLastStep) {
+      void runAnalyze();
+      return;
+    }
+    setStepDirection(1);
+    setStepIndex((prev) => Math.min(prev + 1, totalSteps - 1));
+  }
+
+  function goToPreviousStep() {
+    if (stepIndex === 0) return;
+    setStepDirection(-1);
+    setStepIndex((prev) => Math.max(prev - 1, 0));
+  }
 
   async function runAnalyze(form?: ListingFormState) {
     const src = form ?? input;
@@ -321,214 +471,175 @@ export default function Home() {
               <div className="mb-6 flex items-start justify-between gap-4 border-b border-white/10 pb-5">
                 <div>
                   <h2 className="text-lg font-semibold tracking-tight text-white">Listing details</h2>
-                  <p className="mt-1 text-xs text-slate-500">Required fields for comparison</p>
+                  <p className="mt-1 text-xs text-slate-500">One question at a time</p>
                 </div>
                 <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-medium tabular-nums text-slate-400">
-                  1/1
+                  {stepIndex + 1}/{totalSteps}
                 </span>
               </div>
 
-              <div className="flex flex-col gap-3">
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Price</label>
-                  <input
-                    className={fieldClass}
-                    placeholder="IDR (e.g. 2,500,000,000)"
-                    value={formatNumber(input.price)}
-                    onChange={(e) =>
-                      setInput({ ...input, price: e.target.value.replace(/\D/g, "") })
-                    }
-                  />
-                </div>
+              <div className="mb-6 h-1.5 overflow-hidden rounded-full bg-white/8">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 transition-[width] duration-500 ease-out"
+                  style={{ width: `${stepProgress}%` }}
+                />
+              </div>
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">City</label>
-                  <select
-                    className={fieldClass}
-                    value={input.city}
-                    onChange={(e) =>
-                      setInput({ ...input, city: e.target.value, district: "" })
-                    }
-                  >
-                    <option value="">Select city</option>
-                    {Object.keys(LOCATION_MAP).map((c) => (
-                      <option key={c} value={c} className="bg-slate-900">
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="overflow-hidden">
+                <div
+                  key={`${currentStep.id}-${stepDirection}`}
+                  className={`space-y-6 ${
+                    stepDirection > 0 ? "animate-step-forward" : "animate-step-back"
+                  }`}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <p className="text-2xl font-semibold tracking-tight text-white">
+                        {currentStep.question}
+                      </p>
+                      {!currentStep.required && (
+                        <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                          Optional
+                        </span>
+                      )}
+                    </div>
+                    <p className="max-w-sm text-sm leading-relaxed text-slate-400">
+                      {currentStep.description}
+                    </p>
+                  </div>
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                    District / area
-                  </label>
-                  <select
-                    className={fieldClass}
-                    value={input.district}
-                    disabled={!input.city}
-                    onChange={(e) => setInput({ ...input, district: e.target.value })}
-                  >
-                    <option value="">Select area</option>
-                    {districts.map((d: string) => (
-                      <option key={d} value={d} className="bg-slate-900">
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                    Land size (m²)
-                  </label>
-                  <input
-                    className={fieldClass}
-                    placeholder="0"
-                    value={input.land_size}
-                    onChange={(e) => setInput({ ...input, land_size: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                    Building size (m²)
-                  </label>
-                  <input
-                    className={fieldClass}
-                    placeholder="0"
-                    value={input.building_size}
-                    onChange={(e) => setInput({ ...input, building_size: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Bedrooms</label>
-                  <input
-                    className={fieldClass}
-                    placeholder="0"
-                    value={input.bedrooms}
-                    onChange={(e) => setInput({ ...input, bedrooms: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Bathrooms</label>
-                  <input
-                    className={fieldClass}
-                    placeholder="0"
-                    value={input.bathrooms}
-                    onChange={(e) => setInput({ ...input, bathrooms: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                    Electrical power (W)
-                  </label>
-                  <input
-                    className={fieldClass}
-                    placeholder="4400"
-                    value={input.electricity}
-                    onChange={(e) => setInput({ ...input, electricity: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                    Title (certificate)
-                  </label>
-                  <select
-                    className={fieldClass}
-                    value={input.sertifikat}
-                    onChange={(e) => setInput({ ...input, sertifikat: e.target.value })}
-                  >
-                    <option value="">Select</option>
-                    <option value="shm" className="bg-slate-900">
-                      SHM
-                    </option>
-                    <option value="hgb" className="bg-slate-900">
-                      HGB
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Interior</label>
-                  <select
-                    className={fieldClass}
-                    value={input.interior}
-                    onChange={(e) => setInput({ ...input, interior: e.target.value })}
-                  >
-                    <option value="">Select</option>
-                    <option value="full furnished" className="bg-slate-900">
-                      Full furnished
-                    </option>
-                    <option value="semi furnished" className="bg-slate-900">
-                      Semi furnished
-                    </option>
-                    <option value="unfurnished" className="bg-slate-900">
-                      Unfurnished
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Lot type</label>
-                  <select
-                    className={fieldClass}
-                    value={input.orientation}
-                    onChange={(e) => setInput({ ...input, orientation: e.target.value })}
-                  >
-                    <option value="">Select</option>
-                    <option value="hook" className="bg-slate-900">
-                      Hook
-                    </option>
-                    <option value="normal" className="bg-slate-900">
-                      Normal
-                    </option>
-                  </select>
+                  <div className="min-h-[172px]">
+                    {currentStep.inputType === "select" ? (
+                      <div className="space-y-3">
+                        <select
+                          className={`${fieldClass} text-base`}
+                          value={input[currentStep.id]}
+                          disabled={currentStep.id === "district" && !input.city}
+                          onChange={(e) => updateField(currentStep.id, e.target.value)}
+                        >
+                          <option value="">
+                            {currentStep.id === "city"
+                              ? "Select city"
+                              : currentStep.id === "district"
+                                ? input.city
+                                  ? "Select area"
+                                  : "Choose city first"
+                                : "Select"}
+                          </option>
+                          {(currentStep.id === "city"
+                            ? Object.keys(LOCATION_MAP).map((city) => ({
+                                value: city,
+                                label: city,
+                              }))
+                            : currentStep.id === "district"
+                              ? districts.map((district) => ({
+                                  value: district,
+                                  label: district,
+                                }))
+                              : currentStep.options ?? []
+                          ).map((option) => (
+                            <option
+                              key={option.value}
+                              value={option.value}
+                              className="bg-slate-900"
+                            >
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        {currentStep.id === "district" && input.city && districts.length === 0 && (
+                          <p className="text-xs text-amber-300/90">
+                            No districts are available for this city yet.
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <input
+                        className={`${fieldClass} text-base`}
+                        placeholder={currentStep.placeholder}
+                        value={
+                          currentStep.id === "price"
+                            ? formatNumber(input.price)
+                            : input[currentStep.id]
+                        }
+                        inputMode={
+                          currentStep.id === "price" ||
+                          currentStep.id === "land_size" ||
+                          currentStep.id === "building_size" ||
+                          currentStep.id === "bedrooms" ||
+                          currentStep.id === "bathrooms" ||
+                          currentStep.id === "electricity"
+                            ? "numeric"
+                            : "text"
+                        }
+                        onChange={(e) =>
+                          updateField(
+                            currentStep.id,
+                            currentStep.id === "price"
+                              ? e.target.value.replace(/\D/g, "")
+                              : e.target.value
+                          )
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && canContinue && !loading) {
+                            e.preventDefault();
+                            goToNextStep();
+                          }
+                        }}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
 
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => runAnalyze()}
-              className="group mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 py-3.5 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading ? (
-                  <>
-                    <svg
-                      className="h-4 w-4 animate-spin"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      aria-hidden
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    Analyzing…
-                  </>
-                ) : (
-                  <>
-                    Run analysis
-                    <span className="transition group-hover:translate-x-0.5">→</span>
-                  </>
-                )}
-              </button>
+              <div className="mt-8 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={goToPreviousStep}
+                  disabled={stepIndex === 0 || loading}
+                  className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  disabled={!canContinue || loading}
+                  onClick={goToNextStep}
+                  className="group flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 py-3.5 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? (
+                    <>
+                      <svg
+                        className="h-4 w-4 animate-spin"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        aria-hidden
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      Analyzing…
+                    </>
+                  ) : (
+                    <>
+                      {isLastStep ? "Run analysis" : "Next"}
+                      <span className="transition group-hover:translate-x-0.5">→</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 

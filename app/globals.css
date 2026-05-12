@@ -74,3 +74,33 @@ body {
 .animate-split-pane {
   animation: split-pane-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+
+@keyframes step-forward {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes step-back {
+  from {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-step-forward {
+  animation: step-forward 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-step-back {
+  animation: step-back 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
