@@ -233,10 +233,6 @@ export default function Home() {
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const [listingUrl, setListingUrl] = useState("");
-  const [importError, setImportError] = useState<string | null>(null);
-  const [importing, setImporting] = useState(false);
-
   const districts = input.city ? LOCATION_MAP[input.city] || [] : [];
 
   /** After “Run analysis”, narrow form on the left and show results (or loading) on the right. */
@@ -262,33 +258,6 @@ export default function Home() {
     const data = (await res.json()) as AnalyzeResponse;
     setResult(data);
     setLoading(false);
-  }
-
-  async function handleImportAndAnalyze() {
-    setImportError(null);
-    const u = listingUrl.trim();
-    if (!u) {
-      setImportError("Paste a 99.co listing URL.");
-      return;
-    }
-    setImporting(true);
-    try {
-      const res = await fetch("/api/import-listing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: u }),
-      });
-      const data = (await res.json()) as { error?: string; form?: ListingFormState };
-      if (!res.ok || !data.form) {
-        throw new Error(data.error || "Could not import listing");
-      }
-      setInput(data.form);
-      await runAnalyze(data.form);
-    } catch (e) {
-      setImportError(e instanceof Error ? e.message : "Import failed");
-    } finally {
-      setImporting(false);
-    }
   }
 
   function handleCloseAnalysisView() {
@@ -357,49 +326,6 @@ export default function Home() {
                 <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-medium tabular-nums text-slate-400">
                   1/1
                 </span>
-              </div>
-
-              <div className="mb-6 rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.06] p-4">
-                <label className="mb-1.5 block text-xs font-medium text-emerald-200/90">
-                  99.co listing URL
-                </label>
-                <input
-                  className={fieldClass}
-                  placeholder="https://www.99.co/id/properti/..."
-                  type="url"
-                  autoComplete="off"
-                  value={listingUrl}
-                  onChange={(e) => {
-                    setListingUrl(e.target.value);
-                    setImportError(null);
-                  }}
-                  onPaste={(e) => {
-                    const t = e.clipboardData.getData("text").trim();
-                    if (t.includes("99.co")) setImportError(null);
-                  }}
-                />
-                {importError && (
-                  <p className="mt-2 text-xs text-amber-300/90">{importError}</p>
-                )}
-                <button
-                  type="button"
-                  disabled={importing || loading}
-                  onClick={handleImportAndAnalyze}
-                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-4 py-2.5 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {importing ? (
-                    <>
-                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-400/30 border-t-emerald-300" />
-                      Importing…
-                    </>
-                  ) : (
-                    "Import & analyze"
-                  )}
-                </button>
-                <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
-                  Paste a property listing link — we fetch details and run the market check. Requires
-                  Playwright (local server); serverless hosts may not support live scraping.
-                </p>
               </div>
 
               <div className="flex flex-col gap-3">
@@ -567,7 +493,7 @@ export default function Home() {
 
             <button
               type="button"
-              disabled={loading || importing}
+              disabled={loading}
               onClick={() => runAnalyze()}
               className="group mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 py-3.5 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
             >

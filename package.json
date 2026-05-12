@@ -6,12 +6,10 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "setup:browsers": "playwright install chromium"
+    "lint": "eslint"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.3",
-    "cheerio": "^1.2.0",
     "next": "16.2.4",
     "playwright": "^1.59.1",
     "react": "19.2.4",
