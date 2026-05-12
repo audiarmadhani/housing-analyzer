@@ -59,3 +59,18 @@ body {
   animation: fade-up 0.6s ease-out 0.1s forwards;
   opacity: 0;
 }
+
+@keyframes split-pane-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-split-pane {
+  animation: split-pane-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}

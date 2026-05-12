@@ -1,0 +1,3 @@
+# Optional: CLI helper scrape_listing_url.py (same parsing ideas as lib/scrape99co.ts)
+beautifulsoup4>=4.12
+playwright>=1.40

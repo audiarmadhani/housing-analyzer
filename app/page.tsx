@@ -1,20 +1,8 @@
 "use client";
 
 import { useState } from "react";
-
-type ListingFormState = {
-  price: string;
-  city: string;
-  district: string;
-  land_size: string;
-  building_size: string;
-  bedrooms: string;
-  bathrooms: string;
-  electricity: string;
-  sertifikat: string;
-  interior: string;
-  orientation: string;
-};
+import { LOCATION_MAP } from "@/lib/location-map";
+import type { ListingFormState } from "@/lib/listing-types";
 
 type CompListing = {
   title: string;
@@ -43,53 +31,6 @@ function isAnalyzeError(r: AnalyzeResponse): r is { error: string } {
   return "error" in r && typeof (r as { error?: string }).error === "string";
 }
 
-// -----------------------------
-// LOCATION MAP
-// -----------------------------
-const LOCATION_MAP: Record<string, string[]> = {
-  "jakarta selatan": [
-    "kebayoran baru",
-    "pondok indah",
-    "cipete",
-    "fatmawati",
-    "tebet",
-    "kemang",
-    "jagakarsa",
-  ],
-  "jakarta barat": [
-    "kebon jeruk",
-    "tanjung duren",
-    "cengkareng",
-    "kalideres",
-    "puri indah",
-  ],
-  "jakarta timur": ["duren sawit", "cakung", "cipinang"],
-  "jakarta utara": ["kelapa gading", "pluit", "pantai indah kapuk"],
-  "jakarta pusat": ["menteng", "senen", "tanah abang"],
-  "tangerang selatan": [
-    "bintaro",
-    "graha bintaro",
-    "bsd",
-    "bsd city",
-    "gading serpong",
-    "alam sutera",
-    "serpong",
-    "ciputat",
-    "pamulang",
-  ],
-  "tangerang": ["karawaci", "cikupa", "tigaraksa"],
-  bekasi: [
-    "bekasi barat",
-    "bekasi timur",
-    "bekasi utara",
-    "bekasi selatan",
-    "grand galaxy",
-    "harapan indah",
-  ],
-  depok: ["cinere", "beji", "margonda", "sawangan"],
-  bogor: ["sentul", "sentul city", "cibinong", "bogor selatan"],
-};
-
 function formatNumber(value: string) {
   if (!value) return "";
   return new Intl.NumberFormat("id-ID").format(Number(value.replace(/\D/g, "")));
@@ -104,7 +45,10 @@ function calculateDealScore(percentile: number) {
 }
 
 const fieldClass =
-  "w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 outline-none transition focus:border-violet-400/50 focus:ring-2 focus:ring-violet-500/20";
+  "w-full rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 outline-none transition focus:border-emerald-400/40 focus:ring-2 focus:ring-emerald-500/15";
+
+const glassCard =
+  "rounded-3xl border border-white/15 bg-slate-950/40 p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8";
 
 function PriceBar({
   result,
@@ -289,21 +233,29 @@ export default function Home() {
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [listingUrl, setListingUrl] = useState("");
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+
   const districts = input.city ? LOCATION_MAP[input.city] || [] : [];
 
-  async function handleSubmit() {
+  /** After “Run analysis”, narrow form on the left and show results (or loading) on the right. */
+  const splitLayout = loading || result !== null;
+
+  async function runAnalyze(form?: ListingFormState) {
+    const src = form ?? input;
     setLoading(true);
 
     const res = await fetch("/api/analyze", {
       method: "POST",
       body: JSON.stringify({
-        ...input,
-        price: Number(input.price),
-        land_size: Number(input.land_size),
-        building_size: Number(input.building_size),
-        bedrooms: Number(input.bedrooms),
-        bathrooms: Number(input.bathrooms),
-        electricity: Number(input.electricity),
+        ...src,
+        price: Number(src.price),
+        land_size: Number(src.land_size),
+        building_size: Number(src.building_size),
+        bedrooms: Number(src.bedrooms),
+        bathrooms: Number(src.bathrooms),
+        electricity: Number(src.electricity),
       }),
     });
 
@@ -312,247 +264,405 @@ export default function Home() {
     setLoading(false);
   }
 
+  async function handleImportAndAnalyze() {
+    setImportError(null);
+    const u = listingUrl.trim();
+    if (!u) {
+      setImportError("Paste a 99.co listing URL.");
+      return;
+    }
+    setImporting(true);
+    try {
+      const res = await fetch("/api/import-listing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: u }),
+      });
+      const data = (await res.json()) as { error?: string; form?: ListingFormState };
+      if (!res.ok || !data.form) {
+        throw new Error(data.error || "Could not import listing");
+      }
+      setInput(data.form);
+      await runAnalyze(data.form);
+    } catch (e) {
+      setImportError(e instanceof Error ? e.message : "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function handleCloseAnalysisView() {
+    setResult(null);
+    setLoading(false);
+  }
+
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen overflow-x-hidden">
       <div className="pointer-events-none absolute inset-0 mesh-bg" />
       <div className="pointer-events-none absolute inset-0 grid-overlay" />
 
-      <main className="relative mx-auto max-w-3xl px-4 pb-24 pt-16 sm:px-6 sm:pt-24">
-        <header className="animate-fade-up text-center">
-          <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-xs font-medium text-slate-300 backdrop-blur-sm">
-            <span className="text-base leading-none">🏠</span>
-            Market pricing · Indonesia
-          </div>
-          <h1 className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-4xl font-semibold tracking-tight text-transparent sm:text-5xl">
-            Fair Home Price Check
-          </h1>
-          <p className="mx-auto mt-4 max-w-lg text-pretty text-sm leading-relaxed text-slate-400 sm:text-base">
-            Enter your listing details. We compare them with similar properties and give you an
-            instant read on how fair the price looks.
+      <main
+        className={`relative mx-auto px-4 pb-24 pt-14 transition-[max-width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-6 lg:pt-20 ${splitLayout ? "max-w-7xl" : "max-w-6xl"}`}
+      >
+        {splitLayout && (
+          <p className="mb-6 text-center text-sm text-slate-400 lg:hidden">
+            Fair Home Price Check · Results
           </p>
-        </header>
+        )}
 
-        <div className="animate-fade-up-delay-1 mt-12">
-          <div className="rounded-3xl border border-white/10 bg-slate-900/40 p-6 shadow-2xl shadow-violet-950/20 backdrop-blur-xl sm:p-8">
-            <div className="flex flex-col gap-3">
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Price</label>
-                <input
-                  className={fieldClass}
-                  placeholder="IDR (e.g. 2,500,000,000)"
-                  value={formatNumber(input.price)}
-                  onChange={(e) =>
-                    setInput({ ...input, price: e.target.value.replace(/\D/g, "") })
-                  }
-                />
+        <div
+          className={`flex flex-col gap-10 lg:flex-row lg:items-stretch lg:gap-10 ${!splitLayout ? "lg:justify-between lg:gap-x-12 xl:gap-x-20" : ""}`}
+        >
+          {!splitLayout && (
+            <header className="animate-fade-up flex max-w-xl flex-shrink-0 flex-col justify-center lg:py-4">
+              <div className="mb-8 flex -space-x-2">
+                <span className="relative z-[4] h-10 w-10 rounded-full border-2 border-slate-950 bg-sky-400" />
+                <span className="relative z-[3] h-10 w-10 rounded-full border-2 border-slate-950 bg-rose-500" />
+                <span className="relative z-[2] h-10 w-10 rounded-full border-2 border-slate-950 bg-teal-400" />
+                <span className="relative z-[1] h-10 w-10 rounded-full border-2 border-slate-950 bg-indigo-500" />
+              </div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400/90">
+                Housing AI
+              </p>
+              <h1 className="text-4xl font-bold uppercase leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-[2.75rem] xl:text-5xl">
+                Fair home price check
+              </h1>
+              <p className="mt-5 max-w-md text-pretty text-base leading-relaxed text-slate-400">
+                Tell us about the listing in a few steps — we compare it with similar properties
+                and show how fair the price looks.
+              </p>
+            </header>
+          )}
+
+          <div
+            className={`w-full transition-[max-width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${splitLayout ? "lg:max-w-[22rem] lg:flex-shrink-0" : "lg:max-w-xl lg:flex-shrink-0"}`}
+          >
+            {splitLayout && (
+              <div className="mb-4 hidden lg:block">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400/90">
+                  Housing AI
+                </p>
+                <p className="mt-1 text-sm text-slate-500">Edit listing and run again</p>
+              </div>
+            )}
+
+            <div
+              className={`${glassCard} animate-fade-up-delay-1 border-emerald-500/10 shadow-emerald-950/20 transition-[transform,box-shadow] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${splitLayout ? "lg:shadow-xl" : ""}`}
+            >
+              <div className="mb-6 flex items-start justify-between gap-4 border-b border-white/10 pb-5">
+                <div>
+                  <h2 className="text-lg font-semibold tracking-tight text-white">Listing details</h2>
+                  <p className="mt-1 text-xs text-slate-500">Required fields for comparison</p>
+                </div>
+                <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-medium tabular-nums text-slate-400">
+                  1/1
+                </span>
               </div>
 
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">City</label>
-                <select
+              <div className="mb-6 rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.06] p-4">
+                <label className="mb-1.5 block text-xs font-medium text-emerald-200/90">
+                  99.co listing URL
+                </label>
+                <input
                   className={fieldClass}
-                  value={input.city}
-                  onChange={(e) =>
-                    setInput({ ...input, city: e.target.value, district: "" })
-                  }
+                  placeholder="https://www.99.co/id/properti/..."
+                  type="url"
+                  autoComplete="off"
+                  value={listingUrl}
+                  onChange={(e) => {
+                    setListingUrl(e.target.value);
+                    setImportError(null);
+                  }}
+                  onPaste={(e) => {
+                    const t = e.clipboardData.getData("text").trim();
+                    if (t.includes("99.co")) setImportError(null);
+                  }}
+                />
+                {importError && (
+                  <p className="mt-2 text-xs text-amber-300/90">{importError}</p>
+                )}
+                <button
+                  type="button"
+                  disabled={importing || loading}
+                  onClick={handleImportAndAnalyze}
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-4 py-2.5 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="">Select city</option>
-                  {Object.keys(LOCATION_MAP).map((c) => (
-                    <option key={c} value={c} className="bg-slate-900">
-                      {c}
+                  {importing ? (
+                    <>
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-400/30 border-t-emerald-300" />
+                      Importing…
+                    </>
+                  ) : (
+                    "Import & analyze"
+                  )}
+                </button>
+                <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                  Paste a property listing link — we fetch details and run the market check. Requires
+                  Playwright (local server); serverless hosts may not support live scraping.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Price</label>
+                  <input
+                    className={fieldClass}
+                    placeholder="IDR (e.g. 2,500,000,000)"
+                    value={formatNumber(input.price)}
+                    onChange={(e) =>
+                      setInput({ ...input, price: e.target.value.replace(/\D/g, "") })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-400">City</label>
+                  <select
+                    className={fieldClass}
+                    value={input.city}
+                    onChange={(e) =>
+                      setInput({ ...input, city: e.target.value, district: "" })
+                    }
+                  >
+                    <option value="">Select city</option>
+                    {Object.keys(LOCATION_MAP).map((c) => (
+                      <option key={c} value={c} className="bg-slate-900">
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    District / area
+                  </label>
+                  <select
+                    className={fieldClass}
+                    value={input.district}
+                    disabled={!input.city}
+                    onChange={(e) => setInput({ ...input, district: e.target.value })}
+                  >
+                    <option value="">Select area</option>
+                    {districts.map((d: string) => (
+                      <option key={d} value={d} className="bg-slate-900">
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    Land size (m²)
+                  </label>
+                  <input
+                    className={fieldClass}
+                    placeholder="0"
+                    value={input.land_size}
+                    onChange={(e) => setInput({ ...input, land_size: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    Building size (m²)
+                  </label>
+                  <input
+                    className={fieldClass}
+                    placeholder="0"
+                    value={input.building_size}
+                    onChange={(e) => setInput({ ...input, building_size: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Bedrooms</label>
+                  <input
+                    className={fieldClass}
+                    placeholder="0"
+                    value={input.bedrooms}
+                    onChange={(e) => setInput({ ...input, bedrooms: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Bathrooms</label>
+                  <input
+                    className={fieldClass}
+                    placeholder="0"
+                    value={input.bathrooms}
+                    onChange={(e) => setInput({ ...input, bathrooms: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    Electrical power (W)
+                  </label>
+                  <input
+                    className={fieldClass}
+                    placeholder="4400"
+                    value={input.electricity}
+                    onChange={(e) => setInput({ ...input, electricity: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    Title (certificate)
+                  </label>
+                  <select
+                    className={fieldClass}
+                    value={input.sertifikat}
+                    onChange={(e) => setInput({ ...input, sertifikat: e.target.value })}
+                  >
+                    <option value="">Select</option>
+                    <option value="shm" className="bg-slate-900">
+                      SHM
                     </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                  District / area
-                </label>
-                <select
-                  className={fieldClass}
-                  value={input.district}
-                  disabled={!input.city}
-                  onChange={(e) => setInput({ ...input, district: e.target.value })}
-                >
-                  <option value="">Select area</option>
-                  {districts.map((d: string) => (
-                    <option key={d} value={d} className="bg-slate-900">
-                      {d}
+                    <option value="hgb" className="bg-slate-900">
+                      HGB
                     </option>
-                  ))}
-                </select>
-              </div>
+                  </select>
+                </div>
 
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                  Land size (m²)
-                </label>
-                <input
-                  className={fieldClass}
-                  placeholder="0"
-                  value={input.land_size}
-                  onChange={(e) => setInput({ ...input, land_size: e.target.value })}
-                />
-              </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Interior</label>
+                  <select
+                    className={fieldClass}
+                    value={input.interior}
+                    onChange={(e) => setInput({ ...input, interior: e.target.value })}
+                  >
+                    <option value="">Select</option>
+                    <option value="full furnished" className="bg-slate-900">
+                      Full furnished
+                    </option>
+                    <option value="semi furnished" className="bg-slate-900">
+                      Semi furnished
+                    </option>
+                    <option value="unfurnished" className="bg-slate-900">
+                      Unfurnished
+                    </option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                  Building size (m²)
-                </label>
-                <input
-                  className={fieldClass}
-                  placeholder="0"
-                  value={input.building_size}
-                  onChange={(e) => setInput({ ...input, building_size: e.target.value })}
-                />
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Lot type</label>
+                  <select
+                    className={fieldClass}
+                    value={input.orientation}
+                    onChange={(e) => setInput({ ...input, orientation: e.target.value })}
+                  >
+                    <option value="">Select</option>
+                    <option value="hook" className="bg-slate-900">
+                      Hook
+                    </option>
+                    <option value="normal" className="bg-slate-900">
+                      Normal
+                    </option>
+                  </select>
+                </div>
               </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Bedrooms</label>
-                <input
-                  className={fieldClass}
-                  placeholder="0"
-                  value={input.bedrooms}
-                  onChange={(e) => setInput({ ...input, bedrooms: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Bathrooms</label>
-                <input
-                  className={fieldClass}
-                  placeholder="0"
-                  value={input.bathrooms}
-                  onChange={(e) => setInput({ ...input, bathrooms: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                  Electrical power (W)
-                </label>
-                <input
-                  className={fieldClass}
-                  placeholder="4400"
-                  value={input.electricity}
-                  onChange={(e) => setInput({ ...input, electricity: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Title (certificate)</label>
-                <select
-                  className={fieldClass}
-                  value={input.sertifikat}
-                  onChange={(e) => setInput({ ...input, sertifikat: e.target.value })}
-                >
-                  <option value="">Select</option>
-                  <option value="shm" className="bg-slate-900">
-                    SHM
-                  </option>
-                  <option value="hgb" className="bg-slate-900">
-                    HGB
-                  </option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Interior</label>
-                <select
-                  className={fieldClass}
-                  value={input.interior}
-                  onChange={(e) => setInput({ ...input, interior: e.target.value })}
-                >
-                  <option value="">Select</option>
-                  <option value="full furnished" className="bg-slate-900">
-                    Full furnished
-                  </option>
-                  <option value="semi furnished" className="bg-slate-900">
-                    Semi furnished
-                  </option>
-                  <option value="unfurnished" className="bg-slate-900">
-                    Unfurnished
-                  </option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Lot type</label>
-                <select
-                  className={fieldClass}
-                  value={input.orientation}
-                  onChange={(e) => setInput({ ...input, orientation: e.target.value })}
-                >
-                  <option value="">Select</option>
-                  <option value="hook" className="bg-slate-900">
-                    Hook
-                  </option>
-                  <option value="normal" className="bg-slate-900">
-                    Normal
-                  </option>
-                </select>
-              </div>
-            </div>
 
             <button
               type="button"
-              disabled={loading}
-              onClick={handleSubmit}
-              className="group mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/25 transition hover:from-violet-500 hover:to-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={loading || importing}
+              onClick={() => runAnalyze()}
+              className="group mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 py-3.5 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? (
-                <>
-                  <svg
-                    className="h-4 w-4 animate-spin"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    aria-hidden
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Analyzing…
-                </>
-              ) : (
-                <>
-                  Run analysis
-                  <span className="transition group-hover:translate-x-0.5">→</span>
-                </>
-              )}
-            </button>
+                  <>
+                    <svg
+                      className="h-4 w-4 animate-spin"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      aria-hidden
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Analyzing…
+                  </>
+                ) : (
+                  <>
+                    Run analysis
+                    <span className="transition group-hover:translate-x-0.5">→</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-        </div>
 
-        {result && (
-          <div className="animate-fade-up-delay-2 mt-10 rounded-3xl border border-white/10 bg-slate-900/50 p-6 shadow-2xl backdrop-blur-xl sm:p-10">
-            {isAnalyzeError(result) ? (
-              <div className="flex flex-col items-center gap-3 py-8 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-200">
-                  !
+          {splitLayout && (
+            <div className="animate-split-pane flex min-h-[280px] flex-1 flex-col lg:min-h-[480px]">
+              {loading && (
+                <div
+                  className={`${glassCard} flex flex-1 flex-col justify-center border-white/10`}
+                >
+                  <div className="mx-auto flex max-w-xs flex-col items-center gap-4 text-center">
+                    <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-400" />
+                    <p className="text-sm font-medium text-white">Analyzing your listing</p>
+                    <p className="text-xs text-slate-500">Pulling comparables and building the price model…</p>
+                  </div>
                 </div>
-                <p className="text-sm text-slate-300">{result.error}</p>
-              </div>
-            ) : (
-              <>
-                <ResultSummary result={result} input={input} />
-                <CompsList comps={result.comps} />
-              </>
-            )}
-          </div>
-        )}
+              )}
+
+              {result && !loading && (
+                <div className={`${glassCard} flex-1 border-white/10`}>
+                  {isAnalyzeError(result) ? (
+                    <div className="flex flex-col items-center gap-4 py-12 text-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-200">
+                        !
+                      </div>
+                      <p className="text-sm text-slate-300">{result.error}</p>
+                      <button
+                        type="button"
+                        onClick={handleCloseAnalysisView}
+                        className="rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-xs font-medium text-slate-200 transition hover:border-white/25 hover:bg-white/10"
+                      >
+                        Back to form
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mb-6 flex items-start justify-between gap-4 border-b border-white/10 pb-5">
+                        <div>
+                          <h2 className="text-lg font-semibold tracking-tight text-white">
+                            Market analysis
+                          </h2>
+                          <p className="mt-1 text-xs text-slate-500">Compared with similar listings</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCloseAnalysisView}
+                          aria-label="Close results and return to the home layout"
+                          className="shrink-0 cursor-pointer rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300 transition hover:border-emerald-400/40 hover:bg-emerald-500/20"
+                        >
+                          Done
+                        </button>
+                      </div>
+                      <ResultSummary result={result} input={input} />
+                      <CompsList comps={result.comps} />
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );
