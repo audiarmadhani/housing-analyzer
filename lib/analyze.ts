@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { getSupabase } from "./supabase";
 
 // -----------------------------
 // HELPERS
@@ -155,6 +155,7 @@ function scoreComparable(c: any, input: any) {
 // FETCH STRATEGY (IMPORTANT)
 // -----------------------------
 async function fetchComparables(input: any) {
+  const supabase = getSupabase();
   const city = input.city?.toLowerCase();
   const district = input.district?.toLowerCase();
 
